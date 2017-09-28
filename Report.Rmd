@@ -1,0 +1,173 @@
+---
+output: html_document
+---
+```{r, echo=FALSE, message=FALSE, results="hide"}
+Sys.setlocale("LC_CTYPE", "ru_RU.UTF-8")
+
+if (! "pacman" %in% rownames(installed.packages())) {
+  install.packages(c("pacman"), repos="http://cran.us.r-project.org")
+}
+
+pacman::p_load(dplyr, ggplot2, pander)
+
+source("functions.r")
+
+df <- joinAll()
+
+panderOptions("digits", 2)
+
+```
+---
+title: "SS Тачки"
+output:
+  html_document: default
+date: "27 October 2017"
+runtime: shiny
+---
+
+### Цена
+
+```{r, echo=FALSE, message=FALSE}
+pander(summary(df$price))
+```
+
+## Год
+
+```{r, echo=FALSE, message=FALSE}
+pander(summary(df$production_year))
+```
+
+### Пробег
+
+```{r, echo=FALSE, message=FALSE}
+pander(summary(df$mileage))
+```
+
+## Просмотры
+
+
+Среднее количество просмотров в зависимости от возраста объявления.
+
+```{r, echo=FALSE, message=FALSE}
+ggplot(subset(df, (age_days < 56) & ! is.na(views))) +
+  geom_bar(aes(age_weeks, views), stat="summary", fun.y="mean")
+```
+
+Топ 10 марок по среднему количеству просмотров.
+
+```{r, echo=FALSE, message=FALSE}
+
+top10.brand.viewed <- top10mean(df, views ~ brand, 0)
+
+ggplot(top10.brand.viewed, aes(x=brand, y=views)) +
+  geom_bar(stat='identity') + coord_flip()
+```
+
+## Дата объявления
+
+Количество поданых объявлений в зависимости от дня недели.
+
+```{r, echo=FALSE, message=FALSE}
+ggplot(subset(df, ! is.na(created_weekday))) +
+  geom_bar(aes(x=created_weekday, y=..count..))
+```
+
+## Платность
+
+Количество платных против бесплатных объявлений.
+
+```{r, echo=FALSE, message=FALSE}
+ggplot(subset(df, ! is.na(highlighted)), aes(x=factor(1), y=..count.., fill=highlighted)) +
+  geom_bar(width = 1) + 
+  coord_polar(theta="y")
+```
+
+Средняя цена автомобиля для платных и бесплатных объявлений.
+
+```{r, echo=FALSE, message=FALSE}
+ggplot(subset(df, ! is.na(views) & ! is.na(highlighted) & ! is.na(price))) +
+  geom_bar(aes(highlighted, price, fill=highlighted), stat="summary", fun.y="mean")
+```
+
+Среднее количество показов платных и бесплатных объявлений.
+
+```{r, echo=FALSE, message=FALSE}
+ggplot(subset(df, ! is.na(views) & ! is.na(highlighted) & ! is.na(views))) +
+  geom_bar(aes(highlighted, views, fill=highlighted), stat="summary", fun.y="mean")
+```
+
+Топ 10 самых подсвечиваемых брендов (в % от общего кол-ва объявлений бренда).
+
+```{r, echo=FALSE, message=FALSE}
+top10.brand.highlighted <- top10countprc(df, highlighted ~ brand)
+
+ggplot(top10.brand.highlighted, aes(x=brand, y=highlighted)) +
+  geom_bar(stat='identity') + coord_flip()
+```
+
+## Машины
+
+Топ 10 по количеству объявлений марки.
+
+```{r, echo=FALSE, message=FALSE}
+top10.brand.count <- top10length(df, model ~ brand)
+
+ggplot(top10.brand.count, aes(x=brand, y=model)) +
+  geom_bar(stat='identity') + coord_flip()
+```
+
+Топ 10 самых дорогих марок по средней цене.
+
+```{r, echo=FALSE, message=FALSE}
+top10.brand.price <- top10mean(df, price ~ brand, 0)
+
+ggplot(top10.brand.price, aes(x=brand, y=price)) +
+  geom_bar(stat='identity') + coord_flip()
+```
+
+Топ 10 самых молодых марок по среднему году.
+
+```{r, echo=FALSE, message=FALSE}
+top10.brand.year <- top10mean(df, production_year ~ brand, 2)
+min.brand.year <- min(top10.brand.year$production_year)
+max.brand.year <- max(top10.brand.year$production_year)
+delta.brand.year <- max.brand.year - min.brand.year
+
+ggplot(top10.brand.year, aes(x=brand, y=production_year)) +
+  geom_bar(stat='identity') + coord_flip() +
+  coord_cartesian(ylim=c(min.brand.year - delta.brand.year * 0.1, max.brand.year + delta.brand.year * 0.1))
+```
+
+## Пробег
+
+```{r, echo=FALSE, message=FALSE}
+
+df.correct.mileage <- subset(df, ! is.na(mileage) & (mileage < 750000) & (mileage > 1000))
+
+ggplot(data=df.correct.mileage, aes(df.correct.mileage$mileage)) + 
+  geom_histogram(aes(y =..density..))
+```
+
+Топ 10 брендов по среднему пробегу.
+
+```{r, echo=FALSE, message=FALSE}
+
+top10.brand.mileage <- top10mean(df.correct.mileage, mileage ~ brand, 0)
+
+ggplot(top10.brand.mileage, aes(x=brand, y=mileage)) +
+  geom_bar(stat='identity') + coord_flip()
+```
+
+Средняя машина проезжает в год: `r format(sum(as.numeric(df.correct.mileage$mileage)) / sum(2017 - df.correct.mileage$production_year))` км
+
+```{r, echo=FALSE, message=FALSE}
+
+ggplot(df.correct.mileage) + 
+    aes(mileage, price) +
+    geom_point(position = "jitter")
+
+ggplot(df.correct.mileage) + 
+    aes(mileage, production_year) +
+    geom_point(position = "jitter")
+
+```
