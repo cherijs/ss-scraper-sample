@@ -8,7 +8,7 @@ if (! "pacman" %in% rownames(installed.packages())) {
   install.packages(c("pacman"), repos="http://cran.us.r-project.org")
 }
 
-pacman::p_load(dplyr, ggplot2, pander)
+pacman::p_load(dplyr, ggplot2, jsonlite, pander, magrittr)
 
 source("functions.r")
 

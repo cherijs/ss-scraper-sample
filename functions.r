@@ -1,7 +1,4 @@
 
-library(magrittr)
-
-pacman::p_load(dplyr, ggplot2, jsonlite, pander)
 
 joinAll <- function() {  
   df <- read_json("data/cars-20170927.json", flatten=T, simplifyVector=T)
